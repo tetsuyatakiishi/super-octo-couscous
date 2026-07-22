@@ -22,6 +22,15 @@ Subdirectories (including the category folders themselves) are left untouched,
 so it's safe to run more than once. If a file with the same name already exists
 at the destination, it is skipped rather than overwritten.
 
+## Features
+
+- Sorts files into category folders by extension (case-insensitive)
+- `--dry-run` to preview changes without touching anything
+- `--recursive` to also pull files up out of nested subdirectories
+- Idempotent: safe to run repeatedly; already-sorted files are left alone
+- Never overwrites: name collisions at the destination are skipped
+- Zero dependencies — pure Python 3 standard library
+
 ## Requirements
 
 - Python 3.9+ (standard library only, no dependencies)
@@ -37,6 +46,9 @@ python3 organize.py ~/Downloads
 
 # Preview the changes without moving anything
 python3 organize.py ~/Downloads --dry-run
+
+# Also organize files inside nested subdirectories
+python3 organize.py ~/Downloads --recursive
 ```
 
 ## Example

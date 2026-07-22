@@ -90,6 +90,43 @@ class OrganizeTests(unittest.TestCase):
     def test_empty_directory_returns_empty_summary(self):
         self.assertEqual(organize.organize(self.dir, dry_run=False), {})
 
+    def test_non_recursive_ignores_nested_files(self):
+        self._touch("top.png")
+        nested = self.dir / "sub"
+        nested.mkdir()
+        (nested / "deep.txt").write_text("x")
+
+        counts = organize.organize(self.dir, dry_run=False, recursive=False)
+
+        self.assertEqual(counts, {"images": 1})
+        # The nested file is untouched in non-recursive mode.
+        self.assertTrue((nested / "deep.txt").exists())
+
+    def test_recursive_pulls_up_nested_files(self):
+        self._touch("top.png")
+        nested = self.dir / "sub" / "deeper"
+        nested.mkdir(parents=True)
+        (nested / "deep.txt").write_text("x")
+        (self.dir / "sub" / "photo.gif").write_text("x")
+
+        counts = organize.organize(self.dir, dry_run=False, recursive=True)
+
+        self.assertEqual(counts, {"images": 2, "documents": 1})
+        self.assertTrue((self.dir / "images" / "top.png").exists())
+        self.assertTrue((self.dir / "images" / "photo.gif").exists())
+        self.assertTrue((self.dir / "documents" / "deep.txt").exists())
+
+    def test_recursive_is_idempotent(self):
+        nested = self.dir / "sub"
+        nested.mkdir()
+        (nested / "a.png").write_text("x")
+
+        organize.organize(self.dir, dry_run=False, recursive=True)
+        # A second run must not try to re-move already-sorted files.
+        second = organize.organize(self.dir, dry_run=False, recursive=True)
+
+        self.assertEqual(second, {})
+
 
 class MainTests(unittest.TestCase):
     def test_main_rejects_non_directory(self):

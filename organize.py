@@ -35,27 +35,52 @@ def category_for(path: Path) -> str:
     return EXTENSION_TO_CATEGORY.get(path.suffix.lower(), OTHERS)
 
 
-def organize(target: Path, dry_run: bool = False) -> dict[str, int]:
-    """Sort files in *target* into category subfolders.
+def iter_files(target: Path, recursive: bool) -> list[Path]:
+    """Return the files under *target* that should be organized.
 
-    Only top-level files are moved; existing category subfolders and any
-    other directories are left untouched. Returns a mapping of category
-    name to the number of files moved (or that would be moved).
+    In the default (non-recursive) mode only top-level files are returned.
+    In recursive mode files in nested subdirectories are included too, but
+    anything already living inside one of the category folders is skipped so
+    that the operation stays idempotent (safe to run more than once).
     """
     category_names = set(CATEGORIES) | {OTHERS}
+
+    if not recursive:
+        return [entry for entry in sorted(target.iterdir()) if entry.is_file()]
+
+    files: list[Path] = []
+    for entry in sorted(target.rglob("*")):
+        if not entry.is_file():
+            continue
+        # Leave files that are already sorted into a category folder alone.
+        if entry.relative_to(target).parts[0] in category_names:
+            continue
+        files.append(entry)
+    return files
+
+
+def organize(
+    target: Path, dry_run: bool = False, recursive: bool = False
+) -> dict[str, int]:
+    """Sort files in *target* into category subfolders.
+
+    Top-level files are always considered; with *recursive* enabled, files in
+    nested subdirectories are pulled up into the top-level category folders as
+    well. Existing category folders and (in non-recursive mode) other
+    directories are left untouched. Returns a mapping of category name to the
+    number of files moved (or that would be moved).
+    """
     moved: dict[str, int] = {}
 
-    for entry in sorted(target.iterdir()):
-        # Skip directories (including the category folders themselves).
-        if entry.is_dir():
-            continue
-
+    for entry in iter_files(target, recursive):
         category = category_for(entry)
         destination_dir = target / category
         destination = destination_dir / entry.name
 
+        # Show the path relative to the target so recursive moves are clear.
+        display = entry.relative_to(target)
         action = "Would move" if dry_run else "Moving"
-        print(f"{action}: {entry.name} -> {category}/")
+        print(f"{action}: {display} -> {category}/")
 
         if not dry_run:
             destination_dir.mkdir(exist_ok=True)
@@ -67,8 +92,6 @@ def organize(target: Path, dry_run: bool = False) -> dict[str, int]:
 
         moved[category] = moved.get(category, 0) + 1
 
-    # Ensure referenced categories exist in the summary for clarity.
-    _ = category_names
     return moved
 
 
@@ -103,6 +126,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Show what would move without actually moving anything.",
     )
+    parser.add_argument(
+        "--recursive",
+        action="store_true",
+        help="Also organize files inside nested subdirectories.",
+    )
     return parser.parse_args(argv)
 
 
@@ -115,11 +143,13 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     print(f"Organizing: {target}")
+    if args.recursive:
+        print("(recursive - nested subdirectories included)")
     if args.dry_run:
         print("(dry run - no changes will be made)")
     print()
 
-    moved = organize(target, dry_run=args.dry_run)
+    moved = organize(target, dry_run=args.dry_run, recursive=args.recursive)
     print_summary(moved, args.dry_run)
     return 0
 
