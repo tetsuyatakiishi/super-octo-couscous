@@ -61,3 +61,12 @@ Dry run summary (no files moved)
 ```
 
 Drop the `--dry-run` flag to actually move the files.
+
+## Tests
+
+The project ships with a unit test suite (standard library `unittest`, no
+dependencies):
+
+```bash
+python3 -m unittest -v
+```
