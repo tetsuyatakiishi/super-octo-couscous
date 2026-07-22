@@ -1,5 +1,7 @@
 # organize.py
 
+[![CI](https://github.com/tetsuyatakiishi/super-octo-couscous/actions/workflows/ci.yml/badge.svg)](https://github.com/tetsuyatakiishi/super-octo-couscous/actions/workflows/ci.yml)
+
 A small command-line tool that tidies a directory by sorting its files into
 category subfolders based on their file extension.
 

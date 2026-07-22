@@ -6,6 +6,8 @@ code/, others/) according to their file extension. Supports a dry-run mode
 that reports the planned moves without touching the filesystem.
 """
 
+from __future__ import annotations
+
 import argparse
 import shutil
 import sys
